@@ -1,47 +1,45 @@
 import runpod
-import time
-import os
-from datetime import datetime
+import torch
+from diffusers import StableDiffusionPipeline
+import base64
+from io import BytesIO
 
-def print_volume_structure(start_path="/runpod-volume"):
-    for root, dirs, files in os.walk(start_path):
-        level = root.replace(start_path, "").count(os.sep)
-        indent = " " * 4 * level
-        print(f"{indent}{os.path.basename(root)}/")
-        sub_indent = " " * 4 * (level + 1)
-        for f in files:
-            print(f"{sub_indent}{f}")
+# Load the model once, outside the handler for efficiency
+model_path = "/workspace/my-model"  # your local model path here
 
-# Call it before loading the model
-print("📁 Dumping volume structure:")
-print_volume_structure()
+print("Loading model from:", model_path)
+pipe = StableDiffusionPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
+pipe = pipe.to("cuda")
+pipe.safety_checker = None  # Disable NSFW check if you want
 
 def handler(event):
     print("Worker Start")
-    input = event['input']
+    input_data = event.get('input', {})
 
-    prompt = input.get('prompt')  
-    seconds = input.get('seconds', 0)  
+    prompt = input_data.get('prompt')
+    seconds = input_data.get('seconds', 0)
 
     print(f"Received prompt: {prompt}")
-    print(f"Sleeping for {seconds} seconds...")
+    if seconds > 0:
+        print(f"Sleeping for {seconds} seconds...")
+        import time
+        time.sleep(seconds)
 
-    # Create a timestamped test folder in the mounted volume
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    test_folder = f"/runpod-volume/test_folder_{timestamp}"
-    try:
-        os.makedirs(test_folder, exist_ok=True)
-        print(f"✅ Created test folder: {test_folder}")
-    except Exception as e:
-        print(f"❌ Failed to create test folder: {e}")
+    if not prompt:
+        return {"error": "No prompt provided."}
 
-    time.sleep(seconds)
+    # Generate image
+    image = pipe(prompt).images[0]
 
-    return {
-        "status": "done",
-        "prompt": prompt,
-        "test_folder": test_folder
-    }
+    # Convert image to base64 string
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-if __name__ == '__main__':
+    print("Image generated successfully")
+
+    # Return the base64 image string in a dict
+    return {"image_base64": img_str}
+
+if __name__ == "__main__":
     runpod.serverless.start({'handler': handler})
