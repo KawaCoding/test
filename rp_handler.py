@@ -5,7 +5,7 @@ import base64
 from io import BytesIO
 
 # Load the model once, outside the handler for efficiency
-model_path = "/workspace/models/NSFW-gen-v2"  # your local model path here
+model_path = "UnfilteredAI/NSFW-gen-v2"  # your local model path here
 
 print("Loading model from:", model_path)
 pipe = StableDiffusionPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
