@@ -4,25 +4,6 @@ from diffusers import StableDiffusionPipeline
 import base64
 from io import BytesIO
 
-
-import os
-
-print("Listing root folders:")
-print(os.listdir("/"))
-
-print("Listing /workspace:")
-if os.path.exists("/workspace"):
-    print(os.listdir("/workspace"))
-else:
-    print("/workspace does not exist")
-
-print("Listing /runpod-volume:")
-if os.path.exists("/runpod-volume"):
-    print(os.listdir("/runpod-volume"))
-else:
-    print("/runpod-volume does not exist")
-
-
 # Load the model once, outside the handler for efficiency
 model_path = "/workspace/models/NSFW-gen-v2"  # your local model path here
 
